@@ -169,8 +169,8 @@ def synthesize_all(recipe, num_geogs=None, indexes=None,
             if len(households) > 0:
                 hh_index_start = households.index.values[-1] + 1
 
-            logger.info("Process[%d] Synthesizing household and population for %s: %.3fs" % (os.getpgid(), str(geog_id), time.time() - started_time_for_geo_id))
-            logger.info("Process[%d] Done %d out of %d"  % (os.getpgid(), cnt, len(indexes)))
+            logger.info("Process[%d] Synthesizing household and population for %s: %.3fs" % (os.getpid(), str(geog_id), time.time() - started_time_for_geo_id))
+            logger.info("Process[%d] Done %d out of %d"  % (os.getpid(), cnt, len(indexes)))
 
             if num_geogs is not None and cnt >= num_geogs:
                 break
@@ -182,7 +182,7 @@ def synthesize_all(recipe, num_geogs=None, indexes=None,
     all_persons = pd.concat(people_list, ignore_index=True)
 
     end_time = time.time()
-    logger.info("Process[%d] Time to create household and population for %s: %.3fs" % (os.getpgid(), str(geog_id), end_time - t1))
-    print("Process[%d] Time to create household and population for %s: %.3fs" % (os.getpgid(), str(geog_id), end_time - t1))
+    logger.info("Process[%d] Time to create household and population for %s: %.3fs" % (os.getpid(), str(geog_id), end_time - t1))
+    print("Process[%d] Time to create household and population for %s: %.3fs" % (os.getpid(), str(geog_id), end_time - t1))
 
     return (all_households, all_persons, fit_quality)
