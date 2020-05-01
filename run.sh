@@ -33,19 +33,17 @@ if test "$#" -ge 3; then
 	NUMBER_OF_WORKERS=$3
 fi
 
-STATE_CODE=$1
+STATE_CODE="$1"
 COUNTY_NAME="$2"
 
-OUTPUT_FILE_BASE_NAME="_($STATE_CODE)_($COUNTY_NAME)"
-
+OUTPUT_FILE_BASE_NAME="_$STATE_CODE"_"$COUNTY_NAME"
 
 merge () {
 	mv household* output/ 
 	mv people* output/ 
-	python3 demos/merge.py output/ $OUTPUT_FILE_BASE_NAME
+	python3 demos/merge.py output/ "$OUTPUT_FILE_BASE_NAME"
 }
 
-echo "output file name will be \"$OUTPUT_FILE_BASE_NAME\""
 mkdir -p output/
 
 if test "$#" -eq 8; then

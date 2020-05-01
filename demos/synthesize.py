@@ -5,36 +5,39 @@ import pandas as pd
 import os
 import sys
 import numpy as np
-from multiprocessing import Process
 import uuid
 from multiprocessing import Manager
+from multiprocessing import Pool
+from multiprocessing import Process
 
 
-def run_all(ns, offset):
-    index_to_process = ns.jobs_per_process[offset]
+def run_all(index_to_process, county_name, state_abbr, worker_number):
+    # index_to_process = ns.jobs_per_process[offset]
+    # county_name = ns.county_name
+    # state_abbr = ns.state_abbr
+
     print("Process[%d] Got %d indexes" % (os.getpid(), len(index_to_process)))
 
     indexes = []
     for item in index_to_process:
         indexes.append(pd.Series(item, index=["state", "county", "tract", "block group"]))
 
-    starter = Starter(os.environ["CENSUS"], ns.state_abbr, ns.county_name)
+    starter = Starter(os.environ["CENSUS"], state_abbr, county_name)
 
     households, people, fit_quality = synthesize_all(starter, indexes=indexes)
 
-    hh_file_name = "household_{}_{}_{}.csv".format(ns.state_abbr, ns.county_name, offset)
-    people_file_name = "people_{}_{}_{}.csv".format(ns.state_abbr, ns.county_name, offset)
+    hh_file_name = "household_{}_{}_{}.csv".format(state_abbr, county_name, worker_number)
+    people_file_name = "people_{}_{}_{}.csv".format(state_abbr, county_name, worker_number)
 
     households.to_csv(hh_file_name, index=None, header=True)
     people.to_csv(people_file_name, index=None, header=True)
 
     for geo, qual in fit_quality.items():
-        print ('Geography: {} {} {} {}'.format(
-            geo.state, geo.county, geo.tract, geo.block_group))
+        print('Geography: {} {} {} {}'.format(geo.state, geo.county, geo.tract, geo.block_group))
         # print '    household chisq: {}'.format(qual.household_chisq)
         # print '    household p:     {}'.format(qual.household_p)
-        print ('    people chisq:    {}'.format(qual.people_chisq))
-        print ('    people p:        {}'.format(qual.people_p))
+        print('    people chisq:    {}'.format(qual.people_chisq))
+        print('    people p:        {}'.format(qual.people_p))
 
 
 if __name__ == "__main__":
@@ -65,19 +68,20 @@ if __name__ == "__main__":
     print("Indexes: %d" % (len(indexes)))
 
     jobs_per_process = np.array_split(indexes, workers)
-    mgr = Manager()
-    ns = mgr.Namespace()
-    ns.jobs_per_process = jobs_per_process
-    ns.state_abbr = state_abbr
-    ns.county_name = county_name
+
+    # mgr = Manager()
+    # ns = mgr.Namespace()
+    # ns.jobs_per_process = jobs_per_process
+    # ns.state_abbr = state_abbr
+    # ns.county_name = county_name
 
     processes = []
     for i in range(0, len(jobs_per_process)):
-        p = Process(target=run_all, args=(ns, i,))
+        p = Process(target=run_all, args=(jobs_per_process[i], county_name, state_abbr, i,))
         p.start()
         processes.append(p)
     for p in processes:
         p.join()
         print("Process %d exit code is: %d" % (p.pid, p.exitcode))
         if p.exitcode != 0:
-            print("Process %d has exited unexpectedly, the results are not correct or full!"  % (p.pid))
+            print("Process %d has exited unexpectedly, the results are not correct or full!" % (p.pid))
