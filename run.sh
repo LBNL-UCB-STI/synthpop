@@ -50,13 +50,13 @@ LOG_NAME=$OUTPUT_DIR"SynthPop$OUTPUT_FILE_BASE_NAME"_$(date '+%Y%m%d%H%M%S').log
 
 if test "$#" -eq 8; then
 	(
-	set -x; 
+	set -x;
 	N_WORKERS=$NUMBER_OF_WORKERS CENSUS=$CENSUS_API_KEY python3 demos/synthesize.py $STATE_CODE "$COUNTY_NAME $5 $6 $7 $8" | tee -a "$LOG_NAME"
 	merge | tee -a "$LOG_NAME"
 	)
 elif test "$#" -le 4; then
 	(
-	set -x; 
+	set -x;
 	N_WORKERS=$NUMBER_OF_WORKERS CENSUS=$CENSUS_API_KEY python3 demos/synthesize.py $STATE_CODE "$COUNTY_NAME" | tee -a "$LOG_NAME"
 	merge | tee -a "$LOG_NAME"
 	)
