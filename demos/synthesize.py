@@ -67,7 +67,21 @@ if __name__ == "__main__":
     print("Workers: %d" % (workers))
     print("Indexes: %d" % (len(indexes)))
 
-    jobs_per_process = np.array_split(indexes, workers)
+    pool = Pool(workers)
+
+    jobs_per_process = np.array_split(indexes, len(indexes) // 3)
+    jobs_per_process_with_index = zip(jobs_per_process, range(len(jobs_per_process)))
+    async_results = [pool.apply_async(run_all, args=(index, county_name, state_abbr, worker_idx))
+                     for (index, worker_idx) in jobs_per_process_with_index]
+
+    pool.close()
+    pool.join()
+
+    for result in async_results:
+        if not result.successful():
+            print("ERROR. One of workers exited unexpectedly, the results are not correct or full!")
+
+    # jobs_per_process = np.array_split(indexes, workers)
 
     # mgr = Manager()
     # ns = mgr.Namespace()
@@ -75,13 +89,13 @@ if __name__ == "__main__":
     # ns.state_abbr = state_abbr
     # ns.county_name = county_name
 
-    processes = []
-    for i in range(0, len(jobs_per_process)):
-        p = Process(target=run_all, args=(jobs_per_process[i], county_name, state_abbr, i,))
-        p.start()
-        processes.append(p)
-    for p in processes:
-        p.join()
-        print("Process %d exit code is: %d" % (p.pid, p.exitcode))
-        if p.exitcode != 0:
-            print("Process %d has exited unexpectedly, the results are not correct or full!" % (p.pid))
+    # processes = []
+    # for i in range(0, len(jobs_per_process)):
+    #     p = Process(target=run_all, args=(jobs_per_process[i], county_name, state_abbr, i,))
+    #     p.start()
+    #     processes.append(p)
+    # for p in processes:
+    #     p.join()
+    #     print("Process %d exit code is: %d" % (p.pid, p.exitcode))
+    #     if p.exitcode != 0:
+    #         print("Process %d has exited unexpectedly, the results are not correct or full!" % (p.pid))

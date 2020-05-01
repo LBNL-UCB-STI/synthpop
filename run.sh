@@ -22,41 +22,43 @@ if test "$#" -lt 2; then
 	printUsageMessage
 	exit 2
 fi
-
+STATE_CODE="$1"
+COUNTY_NAME="$2"
 CENSUS_API_KEY=$CENSUS_API_KEY_DEFAULT
+NUMBER_OF_WORKERS=$NUMBER_OF_WORKERS_DEFAULT
+
+OUTPUT_DIR=output/
+OUTPUT_FILE_BASE_NAME="_$STATE_CODE"_"$COUNTY_NAME"
+
+mkdir -p $OUTPUT_DIR
+
 if test "$#" -ge 4; then
 	CENSUS_API_KEY=$4
 fi
 
-NUMBER_OF_WORKERS=$NUMBER_OF_WORKERS_DEFAULT
 if test "$#" -ge 3; then
 	NUMBER_OF_WORKERS=$3
 fi
 
-STATE_CODE="$1"
-COUNTY_NAME="$2"
-
-OUTPUT_FILE_BASE_NAME="_$STATE_CODE"_"$COUNTY_NAME"
-
 merge () {
-	mv household* output/ 
-	mv people* output/ 
-	python3 demos/merge.py output/ "$OUTPUT_FILE_BASE_NAME"
+	mv household*.csv $OUTPUT_DIR
+	mv people*.csv $OUTPUT_DIR
+	python3 demos/merge.py $OUTPUT_DIR "$OUTPUT_FILE_BASE_NAME"
 }
 
-mkdir -p output/
+LOG_NAME=$OUTPUT_DIR"SynthPop$OUTPUT_FILE_BASE_NAME"_$(date '+%Y%m%d%H%M%S').log
 
 if test "$#" -eq 8; then
 	(
 	set -x; 
-	N_WORKERS=$NUMBER_OF_WORKERS CENSUS=$CENSUS_API_KEY python3 demos/synthesize.py $STATE_CODE "$COUNTY_NAME $5 $6 $7 $8"
-	merge
+	N_WORKERS=$NUMBER_OF_WORKERS CENSUS=$CENSUS_API_KEY python3 demos/synthesize.py $STATE_CODE "$COUNTY_NAME $5 $6 $7 $8" | tee -a "$LOG_NAME"
+	merge | tee -a "$LOG_NAME"
 	)
 elif test "$#" -le 4; then
 	(
 	set -x; 
-	N_WORKERS=$NUMBER_OF_WORKERS CENSUS=$CENSUS_API_KEY python3 demos/synthesize.py $STATE_CODE "$COUNTY_NAME"
-	merge
+	N_WORKERS=$NUMBER_OF_WORKERS CENSUS=$CENSUS_API_KEY python3 demos/synthesize.py $STATE_CODE "$COUNTY_NAME" | tee -a "$LOG_NAME"
+	merge | tee -a "$LOG_NAME"
 	)
 else
 	printUsageMessage
