@@ -31,7 +31,7 @@ How to run it in host machine
 2. Open terminal
 3. If it is first time, install all dependencies via running ``python3 setup.py install``
 4. You need to have Census API key in order to query the date. Sign up using the following link: https://api.census.gov/data/key_signup.html
-5. Run ``CENSUS=#API_KEY# python3 demos/synthesize.py TX "Travis County"`` to start generating population for the state Texas (TX) and state Travis County. If you want to generate the data on census tract level, you can pass extra parameteres, an example: ``python3 demos/synthesize.py "TX" "Travis County" 48 453 001804 1``, where 48 - FIPS code of Texas, 453 - FIPS code of Travis county, 001804 - tract code, 1 - block group
+5. Run ``CENSUS=#API_KEY# python3 demos/synthesize.py TX "Travis County"`` to start generating population for the state Texas (TX) and county Travis County. If you want to generate the data on census tract level, you can pass extra parameteres, an example: ``python3 demos/synthesize.py "TX" "Travis County" 48 453 001804 1``, where 48 - FIPS code of Texas, 453 - FIPS code of Travis county, 001804 - tract code, 1 - block group
 
 ==============
 How to run it in docker container
@@ -40,5 +40,5 @@ How to run it in docker container
 1. You have installed docker
 2. Open terminal
 3. Build docker image by running ``docker build .``
-4. Run SynthPop as docker container by running: ``docker run -it #IMAGE_ID# "TX" "Travis County" 2`` to start generating population for the state Texas (TX) and state Travis County using 2 processes.
+4. Run SynthPop as docker container by running: ``docker run -it #IMAGE_ID# "TX" "Travis County" 2`` to start generating population for the state Texas (TX) and county Travis County using 2 processes.
 
