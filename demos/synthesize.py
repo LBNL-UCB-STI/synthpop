@@ -4,19 +4,12 @@ from synthpop.synthesizer import synthesize_all, enable_logging
 import pandas as pd
 import os
 import sys
-import numpy as np
-import uuid
-from multiprocessing import Manager
-from multiprocessing import Pool
-from multiprocessing import Process
-
+from multiprocessing import Pool, set_start_method
+from datetime import datetime
 
 def run_all(index_to_process, county_name, state_abbr, worker_number):
-    # index_to_process = ns.jobs_per_process[offset]
-    # county_name = ns.county_name
-    # state_abbr = ns.state_abbr
-
-    print("Process[%d] Got %d indexes" % (os.getpid(), len(index_to_process)))
+    worker_name = "[{}] task {}".format(str(os.getpid()), str(worker_number))
+    print_progress("{} started with {} indexes.".format(worker_name, str(len(index_to_process))))
 
     indexes = []
     for item in index_to_process:
@@ -26,8 +19,8 @@ def run_all(index_to_process, county_name, state_abbr, worker_number):
 
     households, people, fit_quality = synthesize_all(starter, indexes=indexes)
 
-    hh_file_name = "household_{}_{}_{}.csv".format(state_abbr, county_name, worker_number)
-    people_file_name = "people_{}_{}_{}.csv".format(state_abbr, county_name, worker_number)
+    hh_file_name = "household_{}_{}__part_number_{}.csv".format(state_abbr, county_name, worker_number)
+    people_file_name = "people_{}_{}__part_number_{}.csv".format(state_abbr, county_name, worker_number)
 
     households.to_csv(hh_file_name, index=None, header=True)
     people.to_csv(people_file_name, index=None, header=True)
@@ -39,10 +32,15 @@ def run_all(index_to_process, county_name, state_abbr, worker_number):
         print('    people chisq:    {}'.format(qual.people_chisq))
         print('    people p:        {}'.format(qual.people_p))
 
+    print_progress("{} has completed calculations.".format(worker_name))
 
-if __name__ == "__main__":
-    state_abbr = sys.argv[1]
-    county_name = sys.argv[2]
+
+def print_progress(text):
+    current_time = datetime.now().strftime("%H:%M:%S")
+    print("{} progress report: {}".format(current_time, text))
+
+
+def start_workers(state_abbr, county_name):
     workers = int(os.cpu_count() / 2)
     if 'sched_getaffinity' in dir(os):
         workers = int(len(os.sched_getaffinity(0)) / 2)
@@ -69,9 +67,16 @@ if __name__ == "__main__":
 
     pool = Pool(workers)
 
-    jobs_per_process = np.array_split(indexes, len(indexes) // 3)
-    jobs_per_process_with_index = zip(jobs_per_process, range(len(jobs_per_process)))
-    async_results = [pool.apply_async(run_all, args=(index, county_name, state_abbr, worker_idx))
+    jobs_per_process = indexes  # np.array_split(indexes, len(indexes))
+
+    number_of_jobs = len(jobs_per_process)
+
+    jobs_per_process_with_index = zip(jobs_per_process, range(number_of_jobs))
+
+    # processes do not share memory, so all variables just copy,
+    # and it should be safe to pass a starter object inside function
+    async_results = [pool.apply_async(func=run_all,
+                                      args=([index], county_name, state_abbr, worker_idx, starter))
                      for (index, worker_idx) in jobs_per_process_with_index]
 
     pool.close()
@@ -79,9 +84,10 @@ if __name__ == "__main__":
 
     for result in async_results:
         if not result.successful():
-            print("ERROR. One of workers exited unexpectedly, the results are not correct or full!")
+            print("ERROR. One of the workers exited unexpectedly, the results are not correct or not full!")
+            sys.exit()
 
-    # jobs_per_process = np.array_split(indexes, workers)
+    print_progress("all workers have completed tasks as expected.")
 
     # mgr = Manager()
     # ns = mgr.Namespace()
