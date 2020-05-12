@@ -4,35 +4,39 @@ from synthpop.synthesizer import synthesize_all, enable_logging
 import pandas as pd
 import os
 import sys
-from multiprocessing import Pool, set_start_method
+from multiprocessing import Pool
 from datetime import datetime
+
 
 def run_all(index_to_process, county_name, state_abbr, worker_number):
     worker_name = "[{}] task {}".format(str(os.getpid()), str(worker_number))
-    print_progress("{} started with {} indexes.".format(worker_name, str(len(index_to_process))))
+    try:
+        print_progress("{} started with {} indexes.".format(worker_name, str(len(index_to_process))))
 
-    indexes = []
-    for item in index_to_process:
-        indexes.append(pd.Series(item, index=["state", "county", "tract", "block group"]))
+        indexes = []
+        for item in index_to_process:
+            indexes.append(pd.Series(item, index=["state", "county", "tract", "block group"]))
 
-    starter = Starter(os.environ["CENSUS"], state_abbr, county_name)
+        starter = Starter(os.environ["CENSUS"], state_abbr, county_name)
 
-    households, people, fit_quality = synthesize_all(starter, indexes=indexes)
+        households, people, fit_quality = synthesize_all(starter, indexes=indexes)
 
-    hh_file_name = "household_{}_{}__part_number_{}.csv".format(state_abbr, county_name, worker_number)
-    people_file_name = "people_{}_{}__part_number_{}.csv".format(state_abbr, county_name, worker_number)
+        hh_file_name = "household_{}_{}__part_number_{}.csv".format(state_abbr, county_name, worker_number)
+        people_file_name = "people_{}_{}__part_number_{}.csv".format(state_abbr, county_name, worker_number)
 
-    households.to_csv(hh_file_name, index=None, header=True)
-    people.to_csv(people_file_name, index=None, header=True)
+        households.to_csv(hh_file_name, index=None, header=True)
+        people.to_csv(people_file_name, index=None, header=True)
 
-    for geo, qual in fit_quality.items():
-        print('Geography: {} {} {} {}'.format(geo.state, geo.county, geo.tract, geo.block_group))
-        # print '    household chisq: {}'.format(qual.household_chisq)
-        # print '    household p:     {}'.format(qual.household_p)
-        print('    people chisq:    {}'.format(qual.people_chisq))
-        print('    people p:        {}'.format(qual.people_p))
+        for geo, qual in fit_quality.items():
+            print('Geography: {} {} {} {}'.format(geo.state, geo.county, geo.tract, geo.block_group))
+            # print '    household chisq: {}'.format(qual.household_chisq)
+            # print '    household p:     {}'.format(qual.household_p)
+            print('    people chisq:    {}'.format(qual.people_chisq))
+            print('    people p:        {}'.format(qual.people_p))
 
-    print_progress("{} has completed calculations.".format(worker_name))
+        print_progress("{} has completed calculations.".format(worker_name))
+    except:
+        print("{} unexpected error:".format(worker_name), sys.exc_info()[0])
 
 
 def print_progress(text):
@@ -105,3 +109,9 @@ def start_workers(state_abbr, county_name):
     #     print("Process %d exit code is: %d" % (p.pid, p.exitcode))
     #     if p.exitcode != 0:
     #         print("Process %d has exited unexpectedly, the results are not correct or full!" % (p.pid))
+
+
+if __name__ == "__main__":
+    state_abbr = sys.argv[1]
+    county_name = sys.argv[2]
+    start_workers(state_abbr, county_name)
