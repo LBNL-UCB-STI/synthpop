@@ -8,7 +8,7 @@ from multiprocessing import Pool
 from datetime import datetime
 
 
-def run_all(index_to_process, county_name, state_abbr, worker_number):
+def run_all(index_to_process, county_name, state_abbr, worker_number, starter):
     worker_name = "[{}] task {}".format(str(os.getpid()), str(worker_number))
     try:
         print_progress("{} started with {} indexes.".format(worker_name, str(len(index_to_process))))
@@ -16,8 +16,6 @@ def run_all(index_to_process, county_name, state_abbr, worker_number):
         indexes = []
         for item in index_to_process:
             indexes.append(pd.Series(item, index=["state", "county", "tract", "block group"]))
-
-        starter = Starter(os.environ["CENSUS"], state_abbr, county_name)
 
         households, people, fit_quality = synthesize_all(starter, indexes=indexes)
 
@@ -82,6 +80,8 @@ def start_workers(state_abbr, county_name):
     async_results = [pool.apply_async(func=run_all,
                                       args=([index], county_name, state_abbr, worker_idx, starter))
                      for (index, worker_idx) in jobs_per_process_with_index]
+
+    print("Created %d async function runs" % (len(async_results)))
 
     pool.close()
     pool.join()
