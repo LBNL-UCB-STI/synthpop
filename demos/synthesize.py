@@ -4,37 +4,59 @@ from synthpop.synthesizer import synthesize_all, enable_logging
 import pandas as pd
 import os
 import sys
-from multiprocessing import Pool
+from multiprocessing import Process, Lock, Queue
 from datetime import datetime
 
 
-def run_all(index_to_process, county_name, state_abbr, worker_number, starter):
-    worker_name = "[{}] task {}".format(str(os.getpid()), str(worker_number))
+def synthesize_runner(indexes_queue, county_name, state_abbr, lock, starter):
+    worker_name = "[{}] runner".format(str(os.getpid()))
+    print("{} started.".format(worker_name))
+
     try:
-        print_progress("{} started with {} indexes.".format(worker_name, str(len(index_to_process))))
+        while True:
+            index = -1
+            worker_number = -1
 
-        indexes = []
-        for item in index_to_process:
-            indexes.append(pd.Series(item, index=["state", "county", "tract", "block group"]))
+            lock.acquire()
+            queue_is_empty = indexes_queue.empty()
+            if not queue_is_empty:
+                (index, worker_number) = indexes_queue.get()
+            lock.release()
 
-        households, people, fit_quality = synthesize_all(starter, indexes=indexes)
+            if queue_is_empty:
+                break
 
-        hh_file_name = "household_{}_{}__part_number_{}.csv".format(state_abbr, county_name, worker_number)
-        people_file_name = "people_{}_{}__part_number_{}.csv".format(state_abbr, county_name, worker_number)
+            synthesize_one_index(index, county_name, state_abbr, worker_number, starter)
 
-        households.to_csv(hh_file_name, index=None, header=True)
-        people.to_csv(people_file_name, index=None, header=True)
+        print("{} finished.".format(worker_name))
 
-        for geo, qual in fit_quality.items():
-            print('Geography: {} {} {} {}'.format(geo.state, geo.county, geo.tract, geo.block_group))
-            # print '    household chisq: {}'.format(qual.household_chisq)
-            # print '    household p:     {}'.format(qual.household_p)
-            print('    people chisq:    {}'.format(qual.people_chisq))
-            print('    people p:        {}'.format(qual.people_p))
+    except Exception as e:
+        print("{} finished by unexpected error:".format(worker_name), e)
+        raise e
 
-        print_progress("{} has completed calculations.".format(worker_name))
-    except:
-        print("{} unexpected error:".format(worker_name), sys.exc_info()[0])
+
+def synthesize_one_index(index_to_process, county_name, state_abbr, worker_number, starter):
+    worker_name = "[{}] task {}".format(str(os.getpid()), str(worker_number))
+    print_progress("{} started with index {}".format(worker_name, str(index_to_process)))
+
+    indexes = [pd.Series(index_to_process, index=["state", "county", "tract", "block group"])]
+
+    households, people, fit_quality = synthesize_all(starter, indexes=indexes)
+
+    hh_file_name = "household_{}_{}__part_number_{}.csv".format(state_abbr, county_name, worker_number)
+    people_file_name = "people_{}_{}__part_number_{}.csv".format(state_abbr, county_name, worker_number)
+
+    households.to_csv(hh_file_name, index=None, header=True)
+    people.to_csv(people_file_name, index=None, header=True)
+
+    for geo, qual in fit_quality.items():
+        print('Geography: {} {} {} {}'.format(geo.state, geo.county, geo.tract, geo.block_group))
+        # print '    household chisq: {}'.format(qual.household_chisq)
+        # print '    household p:     {}'.format(qual.household_p)
+        print('    people chisq:    {}'.format(qual.people_chisq))
+        print('    people p:        {}'.format(qual.people_p))
+
+    print_progress("{} has completed calculations.".format(worker_name))
 
 
 def print_progress(text):
@@ -67,48 +89,25 @@ def start_workers(state_abbr, county_name):
     print("Workers: %d" % (workers))
     print("Indexes: %d" % (len(indexes)))
 
-    pool = Pool(workers)
+    lock = Lock()
+    indexes_queue = Queue()
+    for (idx, number) in zip(indexes, range(len(indexes))):
+        indexes_queue.put((idx, number))
 
-    jobs_per_process = indexes  # np.array_split(indexes, len(indexes))
+    processes = []
+    for i in range(0, workers):
+        p = Process(target=synthesize_runner, args=(indexes_queue, county_name, state_abbr, lock, starter))
+        p.start()
+        processes.append(p)
 
-    number_of_jobs = len(jobs_per_process)
-
-    jobs_per_process_with_index = zip(jobs_per_process, range(number_of_jobs))
-
-    # processes do not share memory, so all variables just copy,
-    # and it should be safe to pass a starter object inside function
-    async_results = [pool.apply_async(func=run_all,
-                                      args=([index], county_name, state_abbr, worker_idx, starter))
-                     for (index, worker_idx) in jobs_per_process_with_index]
-
-    print("Created %d async function runs" % (len(async_results)))
-
-    pool.close()
-    pool.join()
-
-    for result in async_results:
-        if not result.successful():
-            print("ERROR. One of the workers exited unexpectedly, the results are not correct or not full!")
+    for p in processes:
+        p.join()
+        print("Process %d exit code is: %d" % (p.pid, p.exitcode))
+        if p.exitcode != 0:
+            print("Process %d has exited unexpectedly, the results are not correct or not full!" % (p.pid))
             sys.exit()
 
     print_progress("all workers have completed tasks as expected.")
-
-    # mgr = Manager()
-    # ns = mgr.Namespace()
-    # ns.jobs_per_process = jobs_per_process
-    # ns.state_abbr = state_abbr
-    # ns.county_name = county_name
-
-    # processes = []
-    # for i in range(0, len(jobs_per_process)):
-    #     p = Process(target=run_all, args=(jobs_per_process[i], county_name, state_abbr, i,))
-    #     p.start()
-    #     processes.append(p)
-    # for p in processes:
-    #     p.join()
-    #     print("Process %d exit code is: %d" % (p.pid, p.exitcode))
-    #     if p.exitcode != 0:
-    #         print("Process %d has exited unexpectedly, the results are not correct or full!" % (p.pid))
 
 
 if __name__ == "__main__":
