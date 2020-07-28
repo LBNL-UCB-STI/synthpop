@@ -83,7 +83,7 @@ class Starter:
         population = ['B01001_001E']
         sex = ['B01001_002E', 'B01001_026E']
         race = ['B02001_0%02dE' % i for i in range(1, 11)]
-        industry = ['C24030_0%02dE' % i for i in range(1, 56)]
+        industry = ['C24030_0%02dE' % i for i in range(1, 56)] + ['B23025_007E']
         male_age_columns = ['B01001_0%02dE' % i for i in range(3, 26)]
         female_age_columns = ['B01001_0%02dE' % i for i in range(27, 50)]
         all_columns = population + sex + race + male_age_columns + \
@@ -125,7 +125,8 @@ class Starter:
                                          "C24030_044E",
             ("industry", "educational / health"): "C24030_021E + C24030_048E",
             ("industry", "arts"): "C24030_024E + C24030_051E",
-            ("industry", "other services"): "C24030_027E + C24030_028E + C24030_054E + C24030_055E"
+            ("industry", "other services"): "C24030_027E + C24030_028E + C24030_054E + C24030_055E",
+            ("industry", "not employed"): "B23025_007E"
         }, index_cols=['state', 'county', 'tract', 'block group'])
 
         # Put the needed PUMS variables here.  These are also the PUMS variables
@@ -261,9 +262,9 @@ class Starter:
                 elif r.NAICSP[0] == '9':
                     return "other services"
                 else:
-                    return "other"
+                    return "not employed"
             except:
-                return "other"
+                return "not employed"
 
         p_pums, jd_persons = cat.joint_distribution(
             p_pums,
