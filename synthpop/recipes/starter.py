@@ -83,10 +83,11 @@ class Starter:
         population = ['B01001_001E']
         sex = ['B01001_002E', 'B01001_026E']
         race = ['B02001_0%02dE' % i for i in range(1, 11)]
+        industry = ['C24030_0%02dE' % i for i in range(1, 56)] + ['B23025_007E']
         male_age_columns = ['B01001_0%02dE' % i for i in range(3, 26)]
         female_age_columns = ['B01001_0%02dE' % i for i in range(27, 50)]
         all_columns = population + sex + race + male_age_columns + \
-            female_age_columns
+            female_age_columns + industry
         p_acs = c.block_group_query(all_columns, state, county, tract=tract, year=acsyear)
         self.p_acs = p_acs
         self.p_acs_cat = cat.categorize(p_acs, {
@@ -115,14 +116,24 @@ class Starter:
             ("race", "other"):   "B02001_004E + B02001_006E + B02001_007E + "
                                  "B02001_008E",
             ("sex", "male"):     "B01001_002E",
-            ("sex", "female"):   "B01001_026E"
+            ("sex", "female"):   "B01001_026E",
+            ("industry", "agriculture"): "C24030_003E + C24030_006E + C24030_030E + C24030_033E",
+            ("industry", "manufacturing"): "C24030_007E + C24030_034E",
+            ("industry", "retail / transportation"): "C24030_008E + C24030_009E + C24030_010E + C24030_035E + "
+                                                     "C24030_036E + C24030_037E",
+            ("industry", "information"): "C24030_013E + C24030_014E + C24030_017E + C24030_040E + C24030_041E + "
+                                         "C24030_044E",
+            ("industry", "educational / health"): "C24030_021E + C24030_048E",
+            ("industry", "arts"): "C24030_024E + C24030_051E",
+            ("industry", "other services"): "C24030_027E + C24030_028E + C24030_054E + C24030_055E",
+            ("industry", "not employed"): "B23025_007E"
         }, index_cols=['state', 'county', 'tract', 'block group'])
 
         # Put the needed PUMS variables here.  These are also the PUMS variables
         # that will be in the outputted synthetic population
         self.h_pums_cols = ('serialno', 'PUMA00', 'PUMA10', 'RT', 'NP',
                             'TYPE', 'VEH', 'WIF', 'NOC', 'FINCP')
-        self.p_pums_cols = ('serialno', 'PUMA00', 'PUMA10', 'AGEP', 'RAC1P', 'SEX')
+        self.p_pums_cols = ('serialno', 'PUMA00', 'PUMA10', 'AGEP', 'RAC1P', 'SEX', 'NAICSP')
 
     def get_geography_name(self):
         # this synthesis is at the block group level for most variables
@@ -230,9 +241,34 @@ class Starter:
                 return "male"
             return "female"
 
+        def industry_cat(r):
+            try:
+                if r.NAICSP[0] == '1':
+                    return "agriculture"
+                elif r.NAICSP[0] == '2':
+                    return "agriculture"
+                elif r.NAICSP[0] == '3':
+                    return "manufacturing"
+                elif r.NAICSP[0] == '4':
+                    return "retail / transportation"
+                elif r.NAICSP[0] == '5':
+                    return "information"
+                elif r.NAICSP[0] == '6':
+                    return "educational / health"
+                elif r.NAICSP[0] == '7':
+                    return "arts"
+                elif r.NAICSP[0] == '8':
+                    return "other services"
+                elif r.NAICSP[0] == '9':
+                    return "other services"
+                else:
+                    return "not employed"
+            except:
+                return "not employed"
+
         p_pums, jd_persons = cat.joint_distribution(
             p_pums,
             cat.category_combinations(self.p_acs_cat.columns),
-            {"age": age_cat, "race": race_cat, "sex": sex_cat}
+            {"age": age_cat, "race": race_cat, "sex": sex_cat, "industry": industry_cat}
         )
         return p_pums, jd_persons
