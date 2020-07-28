@@ -323,13 +323,7 @@ class Starter:
              "hh_children": children_cat,
              "hh_income": income_cat,
              "hh_workers": workers_cat,
-             "tenure_mover": tenure_mover_cat,
-             "seniors": seniors_cat,
-             "hh_size": hh_size_cat,
-             "hh_age_of_head": age_of_head_cat,
-             "sf_detached": sf_detached_cat,
-             "hh_race_of_head": race_of_head_cat,
-             "hispanic_head": hispanic_head_cat}
+             "hh_size": hh_size_cat}
         )
         return h_pums, jd_households
 
