@@ -123,7 +123,7 @@ class Starter:
             ("hh_size", "four or more"): "B25009_006E + B25009_014E + "
                                          "B25009_007E + B25009_015E + "
                                          "B25009_008E + B25009_016E + "
-                                         "B25009_009E + B25009_017E",
+                                         "B25009_009E + B25009_017E"
         }, index_cols=['state', 'county', 'tract', 'block group'])
 
         # gq_population = ['B26001_001E']
@@ -135,8 +135,9 @@ class Starter:
         race = ['B02001_0%02dE' % i for i in range(1, 11)]
         male_age_columns = ['B01001_0%02dE' % i for i in range(3, 26)]
         female_age_columns = ['B01001_0%02dE' % i for i in range(27, 50)]
+        industry = ['C24030_0%02dE' % i for i in range(1, 56)]
         all_columns = population + sex + race + male_age_columns + \
-            female_age_columns + hh_population + hispanic
+            female_age_columns + hh_population + hispanic + industry
         p_acs = c.block_group_query(all_columns, state, county, tract=tract, year=acsyear)
         self.p_acs = p_acs
         self.p_acs_cat = cat.categorize(p_acs, {
@@ -175,6 +176,15 @@ class Starter:
                 "(B03003_003E) * B11002_001E*1.0/B01001_001E",
             ("hispanic", "no"):
                 "(B03003_002E) * B11002_001E*1.0/B01001_001E",
+            ("industry", "agriculture"): "C24030_003E + C24030_006E + C24030_030E + C24030_033E",
+            ("industry", "manufacturing"): "C24030_007E + C24030_034E",
+            ("industry", "retail / transportation"): "C24030_008E + C24030_009E + C24030_010E + C24030_035E + "
+                                                     "C24030_036E + C24030_037E",
+            ("industry", "information"): "C24030_013E + C24030_014E + C24030_017E + C24030_040E + C24030_041E + "
+                                         "C24030_044E",
+            ("industry", "educational / health"): "C24030_021E + C24030_048E",
+            ("industry", "arts"): "C24030_024E + C24030_051E",
+            ("industry", "other services"): "C24030_027E + C24030_028E + C24030_054E + C24030_055E"
         }, index_cols=['state', 'county', 'tract', 'block group'])
 
         # Put the needed PUMS variables here.  These are also the PUMS variables
@@ -183,7 +193,7 @@ class Starter:
                             'R65', 'HINCP', 'VEH', 'MV', 'TEN', 'BLD', 'R18')
         self.p_pums_cols = ('serialno', 'PUMA00', 'PUMA10', 'RELP', 'AGEP',
                             'ESR', 'RAC1P', 'HISP', 'SEX', 'SPORDER',
-                            'PERNP', 'SCHL', 'WKHP', 'JWTR', 'SCH')
+                            'PERNP', 'SCHL', 'WKHP', 'JWTR', 'SCH', 'NAICSP')
 
     def get_geography_name(self):
         # this synthesis is at the block group level for most variables
@@ -379,10 +389,35 @@ class Starter:
                 return "no"
             return "yes"
 
+        def industry_cat(r):
+            try:
+                if r.NAICSP[0] == '1':
+                    return "agriculture"
+                elif r.NAICSP[0] == '2':
+                    return "agriculture"
+                elif r.NAICSP[0] == '3':
+                    return "manufacturing"
+                elif r.NAICSP[0] == '4':
+                    return "retail / transportation"
+                elif r.NAICSP[0] == '5':
+                    return "information"
+                elif r.NAICSP[0] == '6':
+                    return "educational / health"
+                elif r.NAICSP[0] == '7':
+                    return "arts"
+                elif r.NAICSP[0] == '8':
+                    return "other services"
+                elif r.NAICSP[0] == '9':
+                    return "other services"
+                else:
+                    return "other"
+            except:
+                return "other"
+
         p_pums, jd_persons = cat.joint_distribution(
             p_pums,
             cat.category_combinations(self.p_acs_cat.columns),
             {"person_age": age_cat, "race": race_cat, "person_sex": sex_cat,
-             "hispanic": hispanic_cat}
+             "hispanic": hispanic_cat, "industry": industry_cat}
         )
         return p_pums, jd_persons
