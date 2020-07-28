@@ -17,10 +17,10 @@ setup(
     packages=find_packages(exclude=['*.tests']),
     install_requires=[
         'census>=0.5',
-        'numexpr>=2.3.1',
-        'numpy>=1.8.0',
-        'pandas>=0.15.0',
-        'scipy>=0.13.3',
+        'numexpr==2.7.1',
+        'numpy==1.18.3',
+        'pandas==1.0.3',
+        'scipy==1.4.1',
         'us>=0.8'
     ]
 )
