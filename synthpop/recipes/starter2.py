@@ -164,7 +164,7 @@ class Starter:
             ("industry", "arts"): "(C24030_024E + C24030_051E) * B11002_001E*1.0/B01001_001E",
             ("industry", "other services"): "(C24030_027E + C24030_028E + C24030_054E + C24030_055E) * "
                                             "B11002_001E*1.0/B01001_001E",
-            ("industry", "not employed"): "B23025_007E * B11002_001E*1.0/B01001_001E"
+            ("industry", "not employed"): "B11002_001E - C24030_001E * B11002_001E*1.0/B01001_001E"
         }, index_cols=['state', 'county', 'tract', 'block group'])
 
         # Put the needed PUMS variables here.  These are also the PUMS variables
